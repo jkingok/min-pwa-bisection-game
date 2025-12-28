@@ -5,16 +5,261 @@
   <meta name="viewport" content="width=device-width">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon.png">
-  <link rel="apple-touch-icon" href="icon.png">
-  <title>MinPWA</title>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Ccircle cx='96' cy='96' r='64' fill='%2311aa00'/%3E%3C/svg%3E" sizes="any" type="image/svg+xml">
+  <title>Random Bisection (PWA)</title>
+  <style>
+    body {
+      width: 100%;
+      height: 100%;
+      background-color: #263238;
+      color: #B3BBBF;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    a {
+      color: #efefef;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
+  <h1>Random Bisection (PWA)</h1>
+  <p>
+    <script>
+      function switch_to(page) {
+        console.log(`Switching to ${page}...`);
+        for (const child of document.querySelector("#content").children) {
+          if (child.getAttribute("id") === page) {
+            child.setAttribute("style", "display: block");
+          } else {
+            child.setAttribute("style", "display: none");
+          }
+        }
+      }
+    </script>
+    <a href="#about" onclick="switch_to('about');">about</a> | 
+    <a href="#play" onclick="switch_to('play');">play</a>
+  </p>
+  <div id="content">
+    <div id="about">
+      <p>
+        This is a simple game that you can play anywhere!
+      </p>
+      <h2>How to play</h2>
+      <p>
+        A number will be randomly chosen between a minimum and maximum.
+        Your challenge to is find the number before running out of tries.
+        The number of tries is set to the number that would be expected
+        to be needed by the use of a naive dissection algorithm
+        (log base 2 of the number range).
+      </p>
+      <h2>How to install</h2>
+      <p>
+        You should be able to keep this game offline by following steps
+        in your browser to <i>Install App</i> or <i>Add to Home Screen</i>.
+      </p>
+    </div>
+    <div id="play" style="display: none;">
+        <p>
+          <button id="newgame">New Game</button>
+        </p>
+        <p>
+          Enter guess: <input type="number" id="guess" /> <button id="button">Try It!</button>
+        </p>
+        
+        <div id="message"></div>
+
+        <script>
+            const lowest = 1;
+            const highest = 100;
+            let lower = lowest;
+            let upper = highest;
+            let goal = 0;
+            let steps = 0;
+            let guesses = [];
+
+            function isOver() {
+                return (guesses.length >= steps || (guesses.length > 0 && guesses[guesses.length - 1] == goal));
+            }
+
+            function tryGuess(num) {
+                if (isOver()) {
+                    return undefined;
+                }
+                if (num >= lower && num <= upper) {
+                  guesses.push(num);
+                }
+                if (num == goal) {
+                    if (num == goal) {
+                        lower = upper = num;
+                    }
+                    return 0;
+                }
+                if (num < goal) {
+                    lower = num + 1;
+                    return -1;
+                } else {
+                    upper = num - 1;
+                    return 1;
+                }
+            }
+
+            function status() {
+                if (guesses.length > 0 && guesses[guesses.length - 1] == goal)
+                    return `You won! Found ${goal}`;
+                else if (guesses.length > steps)
+                    return "No tries left!";
+                else
+                    return `${lower}-${upper}, ${steps - guesses.length} left`;
+            }
+
+            let m = document?.querySelector("#message");
+            let g = document?.querySelector("#guess");
+            let b = document?.querySelector("#button");
+
+            function update() {
+                tryGuess(+g.value);
+                if (m) m.innerText = status();
+                if (b) { if (isOver()) b.setAttribute("disabled", ""); else b.removeAttribute("disabled"); };
+            }
+
+            function newGame() {
+                lower = lowest;
+                upper = highest;
+                goal = Math.ceil((highest - lowest) * Math.random() + lowest);
+                steps = Math.ceil(Math.log2(highest - lowest + 1));
+                guesses = [];
+                if (m) m.innerText = status();
+                if (g) g.value = 0;
+                if (b.hasAttribute("disabled")) b.removeAttribute("disabled"); 
+                console?.log(`${lower}-${upper} for ${goal} in ${steps - guesses.length}`)
+            }
+
+            document?.querySelector("#button")?.addEventListener("click", update);
+            document?.querySelector("#guess")?.addEventListener("change", update);
+            document?.querySelector("#newgame")?.addEventListener("click", newGame);
+
+            newGame();
+
+            if (m) m.innerText = status();
+        </script>
+    </div>
+  </div>
   <script>
-    if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+    window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('Install prompt available!');
+    });
+
+    const iconSize = 192;
+    const hash = document.location.hash;
+
+    // dynamically created manifest
+    const manifest = {
+      name: window.title, //'DynApp ' + hash,
+      display: 'standalone',
+      theme_color: '#B3BBBF',
+      background_color: '#263238',
+      start_url: window.location.href,
+      // png icon will be converted from SVG
+    };
+
+    // display the entered location hash
+    //document.getElementById("display").textContent = hash;
+
+    // convert the SVG favicon to PNG for platforms that don't support SVG
+    // (Safari and Firefox on Android)
+    (async function() {
+      const svgIconLink = document.querySelector('link[rel="icon"]');
+
+      // convert from SVG string to PNG data URL
+      const pngDataUrl = await svgToPng(svgIconLink.href, iconSize);
+
+      // set the icon meta tags to the new PNG
+      setIcon("link[rel='icon']", pngDataUrl, iconSize);
+      setIcon("link[rel='apple-touch-icon']", pngDataUrl);
+
+      // dynamically create manifest
+      manifest.icons =  [{
+        src: pngDataUrl,
+        sizes: `${iconSize}x${iconSize}`,
+        type: 'image/png'
+      }]
+
+      // set the manifest meta tag data url
+      setManifest(manifest);
+
+      // generate and set the iOS startup image
+      const startupImageDataUrl = await createStartupImage(
+        svgIconLink.href,
+        manifest.background_color
+      );
+      const startupLink = document.createElement('link');
+      startupLink.rel = 'apple-touch-startup-image';
+      startupLink.href = startupImageDataUrl;
+      document.head.appendChild(startupLink);
+    })();
+
+    function setManifest(manifest) {
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      const b64manifest = btoa(JSON.stringify(manifest));
+      link.href = "data:application/json;base64," + b64manifest;
+      document.head.appendChild(link);
+    }
+
+    function setIcon(query, iconurl, size) {
+      const iconLink = document.querySelector(query);
+      iconLink.href = iconurl;
+      iconLink.type = 'image/png';
+      if (size) {
+        iconLink.setAttribute('sizes', `${size}x${size}`);
+      }
+    }
+
+    function svgToPng(svgDataUrl, size) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, size, size);
+          const pngDataUrl = canvas.toDataURL('image/png');
+          resolve(pngDataUrl);
+        };
+        img.onerror = reject;
+        img.src = svgDataUrl;
+      });
+    }
+
+    // Safari needs a startup image
+    function createStartupImage(svgDataUrl, bgColor) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const dpr = window.devicePixelRatio || 1;
+          const canvas = document.createElement('canvas');
+          canvas.width = window.screen.width * dpr;
+          canvas.height = window.screen.height * dpr;
+          const ctx = canvas.getContext('2d');
+
+          ctx.fillStyle = bgColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          const iconDisplaySize = canvas.width * 0.25;
+          const x = (canvas.width - iconDisplaySize) / 2;
+          const y = (canvas.height - iconDisplaySize) / 2;
+          ctx.drawImage(img, x, y, iconDisplaySize, iconDisplaySize);
+
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = reject;
+        img.src = svgDataUrl;
+      });
+    }
   </script>
-  <p>This is MinPWA</p>
-  <p><a href="./single-file-pwa">Single file version</a></p>
 </body>
 </html>
