@@ -22,6 +22,27 @@
       color: #efefef;
       font-weight: bold;
     }
+
+    #newgame {
+      text-align: center;
+      font-weight: bold;
+      font-size: 24pt;
+    }
+
+    .winner {
+      color: #33cc33;
+      font-weight: bold;
+    }
+
+    .loser {
+      color: #cc3333;
+      font-weight: bold;
+    }
+
+    .playing {
+      color: #3333cc;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -69,7 +90,7 @@
           Enter guess: <input type="number" id="guess" /> <button id="button">Try It!</button>
         </p>
         
-        <div id="message"></div>
+        <div id="message" class="playing"></div>
 
         <script>
             const lowest = 1;
@@ -121,7 +142,15 @@
 
             function update() {
                 tryGuess(+g.value);
-                if (m) m.innerText = status();
+                if (m) {
+                  m.innerText = status();
+                  if (isOver()) {
+                    if (guesses[guesses.length - 1] == goal)
+                      m.setAttribute("class", "winner");
+                    else
+                      m.setAttribute("class", "loser");
+                  }
+                }
                 if (b) { if (isOver()) b.setAttribute("disabled", ""); else b.removeAttribute("disabled"); };
             }
 
@@ -131,7 +160,10 @@
                 goal = Math.ceil((highest - lowest) * Math.random() + lowest);
                 steps = Math.ceil(Math.log2(highest - lowest + 1));
                 guesses = [];
-                if (m) m.innerText = status();
+                if (m) {
+                  m.innerText = status();
+                  m.setAttribute("class", "playing");
+                }
                 if (g) g.value = 0;
                 if (b.hasAttribute("disabled")) b.removeAttribute("disabled"); 
                 console?.log(`${lower}-${upper} for ${goal} in ${steps - guesses.length}`)
